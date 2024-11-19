@@ -1,0 +1,67 @@
+import cv2
+import numpy as np
+import pickle
+
+# 카메라 캡처 초기화
+cap_top = cv2.VideoCapture(0)  # 위쪽 카메라
+cap_side = cv2.VideoCapture(1)  # 옆쪽 카메라
+
+# ORB 특징점 추출기
+orb = cv2.ORB_create()
+
+# 매칭된 특징점을 저장할 리스트
+points_top = []  # 위쪽 카메라의 특징점
+points_side = []  # 옆쪽 카메라의 특징점
+
+while True:
+    # 두 카메라에서 이미지 읽기
+    ret_top, frame_top = cap_top.read()
+    ret_side, frame_side = cap_side.read()
+
+    if not ret_top or not ret_side:
+        break
+
+    # 흑백 변환
+    gray_top = cv2.cvtColor(frame_top, cv2.COLOR_BGR2GRAY)
+    gray_side = cv2.cvtColor(frame_side, cv2.COLOR_BGR2GRAY)
+
+    # 특징점 탐지 및 기술자 계산
+    kp_top, des_top = orb.detectAndCompute(gray_top, None)
+    kp_side, des_side = orb.detectAndCompute(gray_side, None)
+
+    # 디스크립터 유효성 확인
+    if des_top is None or des_side is None:
+        print("디스크립터가 감지되지 않았습니다. 다음 프레임으로 넘어갑니다.")
+        continue
+
+    # 디스크립터 타입 일치
+    des_top = des_top.astype(np.uint8)
+    des_side = des_side.astype(np.uint8)
+
+    # 특징점 매칭
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des_top, des_side)
+    matches = sorted(matches, key=lambda x: x.distance)
+
+    # 매칭된 특징점 저장
+    for match in matches:
+        points_top.append(kp_top[match.queryIdx].pt)  # 위쪽 카메라의 좌표
+        points_side.append(kp_side[match.trainIdx].pt)  # 옆쪽 카메라의 좌표
+
+    # 매칭 결과 시각화
+    matched_image = cv2.drawMatches(frame_top, kp_top, frame_side, kp_side, matches[:10], None)
+    cv2.imshow("Matched Features", matched_image)
+
+    # 'q' 키를 눌러 종료
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap_top.release()
+cap_side.release()
+cv2.destroyAllWindows()
+
+# 매칭된 특징점 저장
+with open("matched_points.pkl", "wb") as f:
+    pickle.dump((points_top, points_side), f)
+
+print("특징점이 matched_points.pkl 파일에 저장되었습니다.")
