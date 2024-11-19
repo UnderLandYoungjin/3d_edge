@@ -1,13 +1,17 @@
 import cv2
 import numpy as np
 from scipy.spatial import distance
+# 카메라에서 읽어온 프레임 좌우 반전
+
 
 # 1. 실시간 카메라에서 가장자리 감지
 def capture_and_detect_edges():
     """
     카메라로 이미지를 캡처하고 가장자리(엣지)를 감지하는 함수
     """
+
     cap = cv2.VideoCapture(0)  # 기본 카메라(0번) 열기
+    
     if not cap.isOpened():
         raise Exception("Error: 카메라를 열 수 없습니다.")
     
@@ -17,7 +21,7 @@ def capture_and_detect_edges():
         if not ret:
             print("Error: 프레임을 읽을 수 없습니다.")
             break
-
+        frame = cv2.flip(frame, 1)  # 1은 좌우 반전을 의미
         # 흑백 변환 및 엣지 감지
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
